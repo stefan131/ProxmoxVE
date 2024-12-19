@@ -1,0 +1,54 @@
+{
+  "application": "habitica",
+  "description": "Habitica is a habit-building and productivity app that treats your life like a game.",
+  "repository": "https://github.com/HabitRPG/habitica",
+  "version": "latest",
+  "dependencies": {
+    "nodejs": "14.x",
+    "npm": "6.x",
+    "git": "latest",
+    "mongodb": "installed (external)"
+  },
+  "services": [
+    {
+      "name": "habitica-mongo",
+      "description": "MongoDB development server for Habitica",
+      "exec_start": "/usr/bin/npm run mongo:dev",
+      "working_directory": "/opt/habitica",
+      "user": "root",
+      "restart_policy": "always"
+    },
+    {
+      "name": "habitica-api",
+      "description": "Habitica API server",
+      "exec_start": "/usr/bin/npm start",
+      "working_directory": "/opt/habitica",
+      "user": "root",
+      "restart_policy": "always"
+    },
+    {
+      "name": "habitica-client",
+      "description": "Habitica client development server",
+      "exec_start": "/usr/bin/npm run client:dev",
+      "working_directory": "/opt/habitica",
+      "user": "root",
+      "restart_policy": "always"
+    }
+  ],
+  "installation_steps": [
+    "Install Node.js v14.x and npm v6.x",
+    "Clone the Habitica repository to /opt/habitica",
+    "Copy .env.example to .env and configure it as needed",
+    "Run npm install to install required Node.js packages",
+    "Set up systemd services for mongo:dev, start, and client:dev"
+  ],
+  "cleanup": [
+    "apt-get -y autoremove",
+    "apt-get -y autoclean"
+  ],
+  "notes": [
+    "MongoDB should be pre-installed and running as an external service.",
+    "Ensure .env is properly configured for your MongoDB connection and other settings.",
+    "All services are managed via systemd and restart automatically on failure."
+  ]
+}

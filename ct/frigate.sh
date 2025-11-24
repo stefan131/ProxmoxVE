@@ -13,7 +13,7 @@ var_disk="${var_disk:-50}"
 var_os="${var_os:-debian}"
 var_version="${var_version:-12}"
 var_unprivileged="${var_unprivileged:-1}"
-var_nvidia_passthrough="${var_nvidia_passthrough:-yes}"
+var_nvidia_passthrough="${var_nvidia_passthrough:-no}"
 
 header_info "$APP"
 variables

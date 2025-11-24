@@ -130,7 +130,7 @@ msg_ok "Installed Pip"
 msg_info "Installing Frigate Dependencies"
 $STD update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 # Check for NVIDIA GPU and remove nvidia-pyindex if not present
-source <(curl -s https://raw.githubusercontent.com/remz1337/ProxmoxVE/remz/misc/nvidia.func)
+source <(curl -s https://raw.githubusercontent.com/stefan131/ProxmoxVE/frigate-16-fix/misc/nvidia.func)
 nvidia_installed=$(check_nvidia_drivers_installed)
 if [ $nvidia_installed != 1 ]; then
   sed -i '/nvidia-pyindex/d' /opt/frigate/docker/main/requirements.txt
@@ -293,7 +293,7 @@ detect:
 EOF
 msg_ok "Installed Frigate"
 
-source <(curl -s https://raw.githubusercontent.com/remz1337/ProxmoxVE/remz/misc/nvidia.func)
+source <(curl -s https://raw.githubusercontent.com/stefan131/ProxmoxVE/frigate-16-fix/misc/nvidia.func)
 nvidia_installed=$(check_nvidia_drivers_installed)
 if [ $nvidia_installed == 1 ]; then
   check_nvidia_drivers_version

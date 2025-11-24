@@ -15,8 +15,14 @@ network_check
 update_os
 
 msg_info "Installing Dependencies (Patience)"
-$STD apt-get install -y {jq,wget,xz-utils,python3,python3-dev,python3-distutils,gcc,pkg-config,libhdf5-dev,unzip,build-essential,automake,libtool,ccache,libusb-1.0-0-dev,apt-transport-https,python3.11,python3.11-dev,cmake,git,libgtk-3-dev,libavcodec-dev,libavformat-dev,libswscale-dev,libv4l-dev,libxvidcore-dev,libx264-dev,libjpeg-dev,libpng-dev,libtiff-dev,gfortran,openexr,libatlas-base-dev,libssl-dev,libtbbmalloc2,libtbb-dev,libdc1394-dev,libopenexr-dev,libgstreamer-plugins-base1.0-dev,libgstreamer1.0-dev,tclsh,libopenblas-dev,liblapack-dev,make,moreutils}
+$STD apt-get install -y {jq,wget,xz-utils,python3,python3-dev,python3-distutils,gcc,pkg-config,libhdf5-dev,unzip,build-essential,automake,libtool,ccache,libusb-1.0-0-dev,apt-transport-https,python3.11,python3.11-dev,cmake,git,libgtk-3-dev,libavcodec-dev,libavformat-dev,libswscale-dev,libv4l-dev,libxvidcore-dev,libx264-dev,libjpeg-dev,libpng-dev,libtiff-dev,gfortran,openexr,libatlas-base-dev,libssl-dev,libtbbmalloc2,libtbb-dev,libdc1394-dev,libopenexr-dev,libgstreamer-plugins-base1.0-dev,libgstreamer1.0-dev,tclsh,libopenblas-dev,liblapack-dev,make,moreutils,ffmpeg}
 msg_ok "Installed Dependencies"
+
+msg_info "Creating FFmpeg symlinks"
+mkdir -p /usr/lib/ffmpeg/7.0/bin
+ln -sf /usr/bin/ffmpeg /usr/lib/ffmpeg/7.0/bin/ffmpeg
+ln -sf /usr/bin/ffprobe /usr/lib/ffmpeg/7.0/bin/ffprobe
+msg_ok "Created FFmpeg symlinks"
 
 msg_info "Setting Up Hardware Acceleration"
 $STD apt-get -y install {va-driver-all,ocl-icd-libopencl1,intel-opencl-icd,vainfo,intel-gpu-tools}
@@ -123,7 +129,12 @@ msg_ok "Installed Pip"
 
 msg_info "Installing Frigate Dependencies"
 $STD update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
-sed -i '/nvidia-pyindex/d' /opt/frigate/docker/main/requirements.txt
+# Check for NVIDIA GPU and remove nvidia-pyindex if not present
+source <(curl -s https://raw.githubusercontent.com/remz1337/ProxmoxVE/remz/misc/nvidia.func)
+nvidia_installed=$(check_nvidia_drivers_installed)
+if [ $nvidia_installed != 1 ]; then
+  sed -i '/nvidia-pyindex/d' /opt/frigate/docker/main/requirements.txt
+fi
 $STD pip3 install -r /opt/frigate/docker/main/requirements.txt
 msg_ok "Installed Frigate Dependencies"
 
@@ -168,6 +179,9 @@ msg_ok "Built Audio Models"
 msg_info "Building HailoRT"
 $STD bash /opt/frigate/docker/main/install_hailort.sh
 cp -a /opt/frigate/docker/main/rootfs/. /
+sed -i 's|#!/command/with-contenv bash|#!/bin/bash|g' /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/go2rtc/run
+sed -i 's|#!/command/with-contenv bash|#!/bin/bash|g' /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/frigate/run
+sed -i 's|#!/command/with-contenv bash|#!/bin/bash|g' /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/nginx/run
 sed -i '/^.*unset DEBIAN_FRONTEND.*$/d' /opt/frigate/docker/main/install_deps.sh
 echo "libedgetpu1-max libedgetpu/accepted-eula boolean true" | debconf-set-selections
 echo "libedgetpu1-max libedgetpu/install-confirm-max boolean true" | debconf-set-selections
@@ -239,10 +253,12 @@ $STD pip3 install -r /opt/frigate/docker/main/requirements-dev.txt
 $STD bash /opt/frigate/.devcontainer/initialize.sh
 $STD make version
 cd /opt/frigate/web
+sed -i 's/"build": "tsc && vite build --base=\/BASE_PATH\/"/"build": "vite build --base=\/BASE_PATH\/"/' package.json
 $STD npm install
 $STD npm run build
 cp -r /opt/frigate/web/dist/* /opt/frigate/web/
 cd /opt/frigate/
+touch /opt/frigate/frigate/object_detection/__init__.py
 sed -i '/^s6-svc -O \.$/s/^/#/' /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/frigate/run
 cp -r /opt/frigate/config/. /config
 mkdir -p /media/frigate
@@ -378,7 +394,7 @@ elif grep -q -o -m1 -E 'avx[^ ]* | sse4_2' /proc/cpuinfo; then
   msg_info "Configuring Openvino Object Detection Model"
   cat <<EOF >>/config/config.yml
 ffmpeg:
-  hwaccel_args: auto
+  hwaccel_args: []
 detectors:
   detector01:
     type: openvino
@@ -395,7 +411,7 @@ else
   msg_info "Configuring CPU Object Detection Model"
   cat <<EOF >>/config/config.yml
 ffmpeg:
-  hwaccel_args: auto
+  hwaccel_args: []
 model:
   path: /cpu_model.tflite
 EOF
@@ -451,6 +467,8 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
+WorkingDirectory=/opt/frigate
+Environment="PYTHONPATH=/opt/frigate"
 EnvironmentFile=/etc/frigate.env
 # Environment=PLUS_API_KEY=
 ExecStartPre=+rm /dev/shm/logs/frigate/current

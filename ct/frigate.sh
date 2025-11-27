@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+source <(curl -fsSL https://raw.githubusercontent.com/stefan131/ProxmoxVE/frigate-fixes-clean/misc/build.func)
 # Copyright (c) 2021-2025 tteck
 # Authors: tteck (tteckster)
-# License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
+# License: MIT | https://github.com/stefan131/ProxmoxVE/raw/frigate-fixes-clean/LICENSE
 # Source: https://frigate.video/
 
 APP="Frigate"

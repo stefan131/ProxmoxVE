@@ -59,15 +59,20 @@ $STD ln -svf /usr/lib/btbn-ffmpeg/bin/ffmpeg /usr/local/bin/ffmpeg
 $STD ln -svf /usr/lib/btbn-ffmpeg/bin/ffprobe /usr/local/bin/ffprobe
 $STD pip3 install -U /wheels/*.whl
 ldconfig
+if ! command -v nvidia-smi &> /dev/null; then
+  sed -i '/nvidia-pyindex/d' /opt/frigate/docker/main/requirements-dev.txt
+fi
 $STD pip3 install -r /opt/frigate/docker/main/requirements-dev.txt
 $STD /opt/frigate/.devcontainer/initialize.sh
 $STD make version
+touch /opt/frigate/frigate/object_detection/__init__.py
 cd /opt/frigate/web
 $STD npm install
-$STD npm run build
+DISABLE_ESLINT_PLUGIN=true $STD npm run build -- --no-typecheck || $STD npm run build
 cp -r /opt/frigate/web/dist/* /opt/frigate/web/
 cp -r /opt/frigate/config/. /config
 sed -i '/^s6-svc -O \.$/s/^/#/' /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/frigate/run
+find /etc/s6-overlay/s6-rc.d -type f -name "run" -exec sed -i 's|#!/command/with-contenv bash|#!/bin/bash|g' {} \;
 cat <<EOF >/config/config.yml
 mqtt:
   enabled: false
@@ -219,6 +224,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
+Environment=PYTHONPATH=/opt/frigate
 # Environment=PLUS_API_KEY=
 ExecStartPre=+rm /dev/shm/logs/frigate/current
 ExecStart=/bin/bash -c "bash /opt/frigate/docker/main/rootfs/etc/s6-overlay/s6-rc.d/frigate/run 2> >(/usr/bin/ts '%%Y-%%m-%%d %%H:%%M:%%.S ' >&2) | /usr/bin/ts '%%Y-%%m-%%d %%H:%%M:%%.S '"
